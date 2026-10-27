@@ -77,6 +77,13 @@ li button:hover{background:var(--bg)}
 li small{display:block;color:var(--muted);font-size:12px}
 .foot{font-size:12px;color:var(--muted)}
 footer.gutter{padding-block:0 28px;font-size:12px;color:var(--muted)}
+.tip.pinned{pointer-events:auto}
+.tip a{display:inline-block;margin-top:4px;color:var(--walden-yellow);font-weight:700;font-size:12px}
+li{display:flex;align-items:stretch}
+li button{flex:1;min-width:0}
+.site{flex:none;display:flex;align-items:center;padding:0 6px;border-bottom:1px solid var(--land-other);color:var(--muted);text-decoration:none;font-size:15px}
+.site:hover{color:var(--fg);background:var(--bg)}
+.site:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 @media (prefers-reduced-motion:reduce){.pin{transition:none}}
 </style>
 </head>
@@ -118,7 +125,7 @@ footer.gutter{padding-block:0 28px;font-size:12px;color:var(--muted)}
         <button data-f="accepted" aria-pressed="false">Accepted</button>
       </div>
       <ul id="list"></ul>
-      <div class="foot">Scroll or pinch the map to zoom into dense areas like Kentucky and Ohio. Tap a college in the list to find it.</div>
+      <div class="foot">Scroll or pinch the map to zoom into dense areas like Kentucky and Ohio. Tap a college to find it on the map, or the ↗ to open its website.</div>
     </aside>
   </div>
 </div>
@@ -169,7 +176,9 @@ const tip=document.getElementById('tip'),box=document.getElementById('mapbox');
 let k=1,selected=null;
 function showTip(s,el){
   const r=el.getBoundingClientRect(),b=box.getBoundingClientRect();
-  tip.innerHTML=`<b>${s.name}</b><span>${s.place} · ${s.attend?'Walden students attending':'Accepted'}</span>`;
+  const url=WEBSITES[s.name];
+  tip.innerHTML=`<b>${s.name}</b><span>${s.place} · ${s.attend?'Walden students attending':'Accepted'}</span>`+(url&&s===selected?`<br><a href="${url}" target="_blank" rel="noopener">Visit website ↗</a>`:'');
+  tip.classList.toggle('pinned',s===selected);
   tip.style.left=(r.left+r.width/2-b.left)+'px';tip.style.top=(r.top-b.top)+'px';tip.hidden=false;
 }
 function hideTip(){if(!selected)tip.hidden=true}
@@ -222,7 +231,9 @@ function renderList(){
   for(const s of items){const li=document.createElement('li'),b=document.createElement('button');
     b.innerHTML=`<span class="dot" style="background:var(${s.attend?'--pin-attend':'--pin-accepted'})"></span><span>${s.name}<small>${s.place}</small></span>`;
     if(s===selected)b.style.background='var(--bg)';
-    b.onclick=()=>select(s,true);li.append(b);list.append(li);}
+    b.onclick=()=>select(s,true);li.append(b);
+    if(WEBSITES[s.name]){const a=document.createElement('a');a.className='site';a.href=WEBSITES[s.name];a.target='_blank';a.rel='noopener';a.textContent='↗';a.title=a.ariaLabel=s.name+' website';li.append(a);}
+    list.append(li);}
 }
 document.getElementById('q').addEventListener('input',e=>{q=e.target.value.toLowerCase().trim();renderList()});
 document.querySelectorAll('.filters button').forEach(b=>b.onclick=()=>{filter=b.dataset.f;document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderList();
