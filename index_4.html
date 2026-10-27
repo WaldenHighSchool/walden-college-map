@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Walden College Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Mulish:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: black Walden band with yellow headline and stats, then map beside a searchable college list; stacks on phones */
+:root{
+  --walden-yellow:#ffcb4f; --walden-black:#141414;
+  --bg:#f6f4ee; --surface:#ffffff; --land:#dedbd2; --land-other:#ebe8e0; --border:#cdc8bb; --sea:#f0eee8;
+  --fg:#1c1b19; --muted:#625e55; --accent:#141414; --on-accent:#ffcb4f;
+  --pin-accepted:#ffcb4f; --pin-attend:#d4342b; --pin-stroke:#141414; --home:#141414;
+  --band:#141414; --band-fg:#ffffff; --band-muted:#b9b3a5;
+  --display:"Montserrat", "Segoe UI", system-ui, sans-serif;
+  --body:"Mulish", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121212; --surface:#1c1c1b; --land:#34322e; --land-other:#262523; --border:#47443e; --sea:#181817;
+  --fg:#efece4; --muted:#a9a397; --accent:#ffcb4f; --on-accent:#141414;
+  --pin-stroke:#0a0a0a; --home:#ffcb4f; --band:#0a0a0a; --band-fg:#ffffff; --band-muted:#a9a397; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121212; --surface:#1c1c1b; --land:#34322e; --land-other:#262523; --border:#47443e; --sea:#181817;
+  --fg:#efece4; --muted:#a9a397; --accent:#ffcb4f; --on-accent:#141414;
+  --pin-stroke:#0a0a0a; --home:#ffcb4f; --band:#0a0a0a; --band-fg:#ffffff; --band-muted:#a9a397; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.gutter{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band{background:var(--band);color:var(--band-fg);border-bottom:6px solid var(--walden-yellow)}
+.band .gutter{padding-block:28px 26px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px 32px}
+.brand{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--band-fg)}
+.brand{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px 18px}
+.logo{display:block;width:clamp(170px,22vw,240px);height:auto;max-width:100%}
+.brand span{color:var(--walden-yellow);padding-bottom:4px}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(28px,4.4vw,46px);line-height:1.02;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.01em;color:var(--walden-yellow);text-wrap:balance}
+.lede{margin:0;color:var(--band-muted);font-size:15px;max-width:56ch}
+.lede b{color:var(--band-fg);font-weight:700}
+.stats{display:flex;gap:26px;flex-wrap:wrap}
+.stat b{display:block;font-family:var(--display);font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:var(--walden-yellow)}
+.stat span{display:block;margin-top:4px;font-size:11px;color:var(--band-muted);letter-spacing:.08em;text-transform:uppercase;font-weight:700;max-width:16ch}
+.wrap{padding-block:22px 32px}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.mapbox{position:relative;background:var(--sea);border:1px solid var(--border);border-radius:4px;overflow:hidden;min-width:0}
+#map{display:block;width:100%;height:auto;cursor:grab;touch-action:none}
+#map:active{cursor:grabbing}
+.state{fill:var(--land);stroke:var(--sea);stroke-width:.8}
+.country{fill:var(--land-other);stroke:var(--border);stroke-width:.5}
+.pin{stroke:var(--pin-stroke);cursor:pointer;transition:r .12s}
+.pin.accepted{fill:var(--pin-accepted)}
+.pin.attend{fill:var(--pin-attend)}
+.home{fill:var(--home);stroke:var(--sea)}
+.inset{position:absolute;right:10px;bottom:10px;width:min(26%,210px);background:var(--sea);border:1px solid var(--border);border-radius:3px}
+.inset svg{display:block;width:100%;height:auto}
+.inset-label{position:absolute;top:4px;left:7px;font-family:var(--display);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.legend{position:absolute;left:10px;top:10px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--walden-yellow);border-radius:3px;padding:8px 11px;display:grid;gap:4px;font-size:13px;font-weight:600}
+.legend div{display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--pin-stroke);flex:none;box-sizing:border-box}
+.zoom{position:absolute;right:10px;top:10px;display:grid;gap:4px}
+.zoom button{width:32px;height:32px;border:1px solid var(--border);background:var(--surface);color:var(--fg);border-radius:3px;font-size:18px;line-height:1;cursor:pointer;font-weight:700}
+.zoom button:hover{background:var(--walden-yellow);color:var(--walden-black);border-color:var(--walden-yellow)}
+.zoom button:focus-visible,.filters button:focus-visible,input:focus-visible,li button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tip{position:absolute;pointer-events:none;background:var(--walden-black);color:#fff;border-radius:3px;padding:7px 10px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:230px;transform:translate(-50%,calc(-100% - 12px))}
+.tip b{display:block;font-weight:700}
+.tip span{color:var(--walden-yellow);font-size:12px}
+aside{background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--walden-yellow);border-radius:3px;padding:14px;display:grid;gap:10px;min-width:0}
+aside h2{margin:0;font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+aside input{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:3px;background:var(--bg);color:var(--fg);font:inherit}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--fg);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+ul{list-style:none;margin:0;padding:0;max-height:560px;overflow:auto}
+li button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:6px 4px;border:0;border-bottom:1px solid var(--land-other);background:none;color:var(--fg);font:inherit;font-size:14px;cursor:pointer}
+li button:hover{background:var(--bg)}
+li small{display:block;color:var(--muted);font-size:12px}
+.foot{font-size:12px;color:var(--muted)}
+footer.gutter{padding-block:0 28px;font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.pin{transition:none}}
+</style>
+</head>
+<body>
+
+<section class="band">
+  <div class="gutter">
+    <div>
+      <div class="brand"><img class="logo" src="https://images.squarespace-cdn.com/content/v1/593065398419c2cf6d78ea64/1576241324905-YW7G9P25TZ1SLXJ4HJT4/White_horizontal.png?format=750w" alt="Walden School"><span>College Counseling</span></div>
+      <h1>Where Walden Students Go</h1>
+      <p class="lede"><b>100% of graduating seniors who apply</b> are accepted at four-year colleges and universities. The Class of 2026 earned over <b>$5.3 million</b> in merit scholarships, over <b>$300,000 per graduate</b>.</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sTotal">0</b><span>Colleges since 2020</span></div>
+      <div class="stat"><b id="sAttend">0</b><span>Where students enrolled</span></div>
+      <div class="stat"><b id="sStates">0</b><span>States &amp; countries</span></div>
+    </div>
+  </div>
+</section>
+<div class="gutter wrap">
+  <div class="main">
+    <div class="mapbox" id="mapbox">
+      <svg id="map" viewBox="0 0 960 600" role="img" aria-label="Map of colleges accepting Walden students"></svg>
+      <div class="legend">
+        <div><span class="dot" style="background:var(--pin-attend)"></span>Walden students attending</div>
+        <div><span class="dot" style="background:var(--pin-accepted)"></span>Accepted</div>
+        <div><span class="dot" style="background:var(--home);border-radius:2px;transform:rotate(45deg) scale(.85)"></span>Walden School, Louisville</div>
+      </div>
+      <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zreset" aria-label="Reset view" style="font-size:13px">⟲</button></div>
+      <div class="inset"><div class="inset-label">Europe</div><svg id="inset" viewBox="0 0 250 230"></svg></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <aside>
+      <h2>Colleges</h2>
+      <input id="q" type="search" placeholder="Search colleges or cities" aria-label="Search colleges">
+      <div class="filters" role="group" aria-label="Filter">
+        <button data-f="all" aria-pressed="true">All</button>
+        <button data-f="attend" aria-pressed="false">Attending</button>
+        <button data-f="accepted" aria-pressed="false">Accepted</button>
+      </div>
+      <ul id="list"></ul>
+      <div class="foot">Scroll or pinch the map to zoom into dense areas like Kentucky and Ohio. Tap a college in the list to find it.</div>
+    </aside>
+  </div>
+</div>
+<footer class="gutter">Walden School · Louisville, Kentucky · Acceptances from the Classes of 2020 through 2026</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+(async()=>{
+const [st,w]=await Promise.all([
+  fetch('https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json').then(r=>r.json()),
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json').then(r=>r.json())]);
+const all=topojson.feature(w,w.objects.countries).features;
+const pick=ids=>({type:'FeatureCollection',features:all.filter(f=>ids.includes(f.id))});
+const GEO={states:st,na:pick(['124','484','192','044']),eu:pick(['826','372','250','528','056','208','724','620','276','380','756','040'])};
+
+// Matriculations (red pins)
+const ATTENDING = new Set([
+"Abertay University",
+"American University",
+"Bellarmine University",
+"DePaul University",
+"Hope College",
+"Jefferson Community & Technical College",
+"Savannah College of Art and Design",
+"Transylvania University",
+"University College Dublin",
+"University of Kentucky",
+"University of Louisville",
+"Centre College",
+"The Kansas City Art Institute",
+"Kent State University",
+"Miami University - Ohio",
+"Midway University",
+"Ohio Wesleyan University",
+"Spalding University",
+"Columbus College of Art & Design",
+"Eastern Kentucky University",
+"Emory & Henry College",
+"Flagler College",
+"Full Sail University",
+"Indiana University (Bloomington)",
+"Indiana University (Southeast)",
+"Murray State University",
+"Northern Illinois University",
+"Northern Kentucky University",
+"Purdue University",
+"University of Colorado Boulder",
+"University of Dayton",
+"University of Massachusetts Amherst",
+"Western Kentucky University",
+"Berea College",
+"Butler University",
+"Kenyon College",
+"Ohio Northern University",
+"Oxford College of Emory University",
+"Rochester Institute of Technology",
+"University of New Haven",
+"Hanover College",
+"Rhode Island School of Design",
+"University of Cincinnati",
+"Hillsdale College",
+"Alanus University",
+"Kentucky Welding Institute",
+"College of Charleston",
+"Wofford College",
+"Kalamazoo College",
+"Middle Tennessee State University",
+"Sarah Lawrence College",
+"Wheaton College"
+]);
+
+// [name, city/region, lon, lat]
+const SCHOOLS = [
+["Abertay University","Dundee, Scotland",-2.974,56.463],
+["American University","Washington, DC",-77.0888,38.937],
+["Andrews University","Berrien Springs, MI",-86.357,41.962],
+["Asbury University","Wilmore, KY",-84.661,37.863],
+["Auburn University","Auburn, AL",-85.481,32.603],
+["Austin Peay State University","Clarksville, TN",-87.354,36.534],
+["Ball State University","Muncie, IN",-85.409,40.207],
+["Bard College","Annandale-on-Hudson, NY",-73.908,42.021],
+["Barton College","Wilson, NC",-77.922,35.736],
+["Bellarmine University","Louisville, KY",-85.702,38.219],
+["Belmont University","Nashville, TN",-86.796,36.134],
+["Berry College","Mount Berry, GA",-85.188,34.29],
+["Berea College","Berea, KY",-84.291,37.574],
+["Bowling Green State University","Bowling Green, OH",-83.639,41.378],
+["Butler University","Indianapolis, IN",-86.169,39.84],
+["Calvin University","Grand Rapids, MI",-85.588,42.93],
+["Campbellsville University","Campbellsville, KY",-85.35,37.342],
+["Carleton University","Ottawa, ON",-75.696,45.388],
+["Carthage College","Kenosha, WI",-87.821,42.623],
+["Case Western Reserve University","Cleveland, OH",-81.608,41.505],
+["Catholic University of America","Washington, DC",-76.999,38.936],
+["Centre College","Danville, KY",-84.779,37.646],
+["The Citadel","Charleston, SC",-79.961,32.798],
+["Clemson University","Clemson, SC",-82.837,34.683],
+["College of Charleston","Charleston, SC",-79.937,32.784],
+["The College of William & Mary","Williamsburg, VA",-76.714,37.271],
+["The College of Wooster","Wooster, OH",-81.936,40.809],
+["Columbia College Chicago","Chicago, IL",-87.625,41.874],
+["Columbus College of Art & Design","Columbus, OH",-82.99,39.966],
+["Denison University","Granville, OH",-82.524,40.072],
+["DePaul University","Chicago, IL",-87.655,41.925],
+["DePauw University","Greencastle, IN",-86.862,39.64],
+["Dominican University of California","San Rafael, CA",-122.511,37.981],
+["Drexel University","Philadelphia, PA",-75.19,39.957],
+["Dublin City University","Dublin, Ireland",-6.256,53.385],
+["Eastern Kentucky University","Richmond, KY",-84.296,37.735],
+["Eastern Michigan University","Ypsilanti, MI",-83.624,42.251],
+["Eckerd College","St. Petersburg, FL",-82.688,27.716],
+["Elon University","Elon, NC",-79.504,36.103],
+["Embry-Riddle Aeronautical University","Daytona Beach, FL",-81.048,29.188],
+["Emory University","Atlanta, GA",-84.324,33.792],
+["Fisk University","Nashville, TN",-86.805,36.169],
+["Florida Atlantic University","Boca Raton, FL",-80.102,26.372],
+["Florida International University","Miami, FL",-80.374,25.757],
+["Fordham University","Bronx, NY",-73.886,40.861],
+["Franklin College","Franklin, IN",-86.048,39.48],
+["George Mason University","Fairfax, VA",-77.307,38.83],
+["Georgetown College","Georgetown, KY",-84.556,38.208],
+["Hampshire College","Amherst, MA",-72.531,42.325],
+["Hanover College","Hanover, IN",-85.46,38.714],
+["Hillsdale College","Hillsdale, MI",-84.633,41.938],
+["Hope College","Holland, MI",-86.103,42.787],
+["Howard University","Washington, DC",-77.019,38.922],
+["Illinois Institute of Technology","Chicago, IL",-87.627,41.835],
+["Indiana University (Bloomington)","Bloomington, IN",-86.523,39.168],
+["Indiana University (Southeast)","New Albany, IN",-85.816,38.346],
+["Iowa State University","Ames, IA",-93.648,42.027],
+["Ithaca College","Ithaca, NY",-76.495,42.422],
+["James Madison University","Harrisonburg, VA",-78.87,38.435],
+["Jefferson Community & Technical College","Louisville, KY",-85.757,38.246],
+["Kalamazoo College","Kalamazoo, MI",-85.6,42.29],
+["The Kansas City Art Institute","Kansas City, MO",-94.583,39.045],
+["Kent State University","Kent, OH",-81.342,41.149],
+["Kentucky Wesleyan University","Owensboro, KY",-87.131,37.747],
+["Kenyon College","Gambier, OH",-82.397,40.376],
+["Lake Forest College","Lake Forest, IL",-87.83,42.249],
+["Lewis University","Romeoville, IL",-88.08,41.605],
+["Lindsey Wilson College","Columbia, KY",-85.308,37.102],
+["Loyola University Chicago","Chicago, IL",-87.658,41.999],
+["Marshall University","Huntington, WV",-82.425,38.424],
+["Maryville College","Maryville, TN",-83.964,35.752],
+["Miami University - Ohio","Oxford, OH",-84.73,39.51],
+["Michigan State University","East Lansing, MI",-84.482,42.702],
+["Middle Tennessee State University","Murfreesboro, TN",-86.367,35.849],
+["Midway University","Midway, KY",-84.684,38.151],
+["Morehead State University","Morehead, KY",-83.433,38.188],
+["Mount St. Mary’s University","Emmitsburg, MD",-77.35,39.68],
+["Mount St. Joseph University","Cincinnati, OH",-84.638,39.096],
+["Murray State University","Murray, KY",-88.319,36.616],
+["New York Institute of Technology","Old Westbury, NY",-73.604,40.813],
+["New York University","New York, NY",-73.997,40.73],
+["Niagara University","Lewiston, NY",-79.037,43.137],
+["Northern Kentucky University","Highland Heights, KY",-84.464,39.031],
+["Oakwood University","Huntsville, AL",-86.638,34.764],
+["The Ohio State University","Columbus, OH",-83.031,40.007],
+["Ohio Northern University","Ada, OH",-83.824,40.772],
+["Ohio Wesleyan University","Delaware, OH",-83.068,40.297],
+["Oregon Institute of Technology","Klamath Falls, OR",-121.785,42.256],
+["Otterbein University","Westerville, OH",-82.933,40.126],
+["Oxford College of Emory University","Oxford, GA",-83.867,33.62],
+["Pennsylvania State University","University Park, PA",-77.86,40.798],
+["Pratt Institute","Brooklyn, NY",-73.963,40.691],
+["Purdue University","West Lafayette, IN",-86.921,40.424],
+["Quinnipiac University","Hamden, CT",-72.894,41.419],
+["Rensselaer Polytechnic Institute","Troy, NY",-73.678,42.73],
+["Rhode Island School of Design","Providence, RI",-71.408,41.826],
+["Ringling College of Art + Design","Sarasota, FL",-82.559,27.38],
+["Rochester Institute of Technology","Rochester, NY",-77.674,43.084],
+["Rose-Hulman Institute","Terre Haute, IN",-87.324,39.483],
+["Saint Louis University","St. Louis, MO",-90.234,38.636],
+["San Diego State University","San Diego, CA",-117.072,32.776],
+["Sarah Lawrence College","Bronxville, NY",-73.844,40.935],
+["Savannah College of Art and Design","Savannah, GA",-81.095,32.071],
+["The School of the Art Institute of Chicago","Chicago, IL",-87.625,41.879],
+["Sewanee: University of the South","Sewanee, TN",-85.921,35.204],
+["Spalding University","Louisville, KY",-85.759,38.242],
+["Syracuse University","Syracuse, NY",-76.135,43.039],
+["Texas A&M University","College Station, TX",-96.341,30.615],
+["Thomas More University","Crestview Hills, KY",-84.58,39.027],
+["Toronto Metropolitan University","Toronto, ON",-79.379,43.658],
+["Transylvania University","Lexington, KY",-84.495,38.053],
+["Trinity College Dublin","Dublin, Ireland",-6.255,53.344],
+["Tulane University","New Orleans, LA",-90.12,29.94],
+["University College Dublin","Dublin, Ireland",-6.221,53.307],
+["University of Central Florida","Orlando, FL",-81.2,28.602],
+["University of Cincinnati","Cincinnati, OH",-84.515,39.133],
+["University of Connecticut","Storrs, CT",-72.254,41.808],
+["University of Evansville","Evansville, IN",-87.53,37.971],
+["University of Illinois (Urbana-Champaign)","Urbana-Champaign, IL",-88.227,40.102],
+["University of Indianapolis","Indianapolis, IN",-86.133,39.709],
+["University of Kentucky","Lexington, KY",-84.504,38.031],
+["University of Louisville","Louisville, KY",-85.759,38.212],
+["University of Maryland Eastern Shore","Princess Anne, MD",-75.685,38.21],
+["University of Miami","Coral Gables, FL",-80.279,25.721],
+["University of Missouri (Kansas City)","Kansas City, MO",-94.577,39.033],
+["University of New Haven","West Haven, CT",-72.962,41.292],
+["University of North Carolina (Greensboro)","Greensboro, NC",-79.81,36.069],
+["University of Pittsburgh","Pittsburgh, PA",-79.961,40.444],
+["University of Rhode Island","Kingston, RI",-71.53,41.486],
+["University of Southern California","Los Angeles, CA",-118.285,34.022],
+["University of South Florida","Tampa, FL",-82.414,28.059],
+["University of Tampa","Tampa, FL",-82.465,27.947],
+["University of Texas (Dallas)","Richardson, TX",-96.75,32.986],
+["University of Tennessee","Knoxville, TN",-83.93,35.954],
+["Vanderbilt University","Nashville, TN",-86.803,36.145],
+["Virginia Military Institute","Lexington, VA",-79.438,37.79],
+["Voorhees College","Denmark, SC",-81.134,33.308],
+["Wake Forest University","Winston-Salem, NC",-80.277,36.135],
+["Warren Wilson College","Swannanoa, NC",-82.443,35.608],
+["Washington Adventist University","Takoma Park, MD",-77.001,38.984],
+["Washington University in St. Louis","St. Louis, MO",-90.311,38.649],
+["Western Kentucky University","Bowling Green, KY",-86.455,36.985],
+["Wheaton College","Wheaton, IL",-88.099,41.869],
+["Wingate University","Wingate, NC",-80.441,34.985],
+["Wittenberg University","Springfield, OH",-83.816,39.931],
+["Wofford College","Spartanburg, SC",-81.937,34.958],
+["Xavier University","Cincinnati, OH",-84.473,39.149],
+["American Musical and Dramatic Academy","New York, NY",-73.981,40.779],
+["Bradley University","Peoria, IL",-89.616,40.698],
+["Colorado State University","Fort Collins, CO",-105.087,40.573],
+["Earlham College","Richmond, IN",-84.912,39.824],
+["Elmhurst College","Elmhurst, IL",-87.945,41.892],
+["Emory & Henry College","Emory, VA",-81.833,36.772],
+["Flagler College","St. Augustine, FL",-81.314,29.894],
+["Florida Institute of Technology","Melbourne, FL",-80.623,28.065],
+["Franklin & Marshall College","Lancaster, PA",-76.32,40.048],
+["Full Sail University","Winter Park, FL",-81.303,28.596],
+["Kentucky College of Art & Design","Louisville, KY",-85.76,38.238],
+["Kentucky State University","Frankfort, KY",-84.858,38.199],
+["King’s College","Wilkes-Barre, PA",-75.882,41.249],
+["Long Island University","Brookville, NY",-73.593,40.816],
+["Loyola University New Orleans","New Orleans, LA",-90.121,29.935],
+["North Central College","Naperville, IL",-88.143,41.772],
+["Northern Illinois University","DeKalb, IL",-88.771,41.935],
+["Point Park University","Pittsburgh, PA",-80.0,40.439],
+["University of Colorado Boulder","Boulder, CO",-105.266,40.008],
+["University of Dayton","Dayton, OH",-84.179,39.74],
+["University of Massachusetts Amherst","Amherst, MA",-72.53,42.387],
+["University of Richmond","Richmond, VA",-77.54,37.574],
+["University of San Diego","San Diego, CA",-117.188,32.772],
+["Virginia Tech","Blacksburg, VA",-80.423,37.228],
+["Viterbo University","La Crosse, WI",-91.241,43.805],
+["Wabash College","Crawfordsville, IN",-86.908,40.037],
+["Ohio University","Athens, OH",-82.101,39.324],
+["Purdue University Fort Wayne","Fort Wayne, IN",-85.109,41.117],
+["Saint Louis University Madrid","Madrid, Spain",-3.711,40.447],
+["Alanus University","Alfter, Germany",7.03,50.735],
+["Kentucky Welding Institute","Flemingsburg, KY",-83.734,38.422],
+["Colorado College","Colorado Springs, CO",-104.824,38.848],
+["Indiana University Indianapolis","Indianapolis, IN",-86.176,39.774],
+["University of North Georgia","Dahlonega, GA",-83.985,34.528],
+["Youngstown State University","Youngstown, OH",-80.646,41.106]
+].map(([name,place,lon,lat])=>({name,place,lon,lat,attend:ATTENDING.has(name),intl:lon>-30}));
+
+SCHOOLS.sort((a,b)=>(b.attend-a.attend));
+const HOME=[-85.62,38.24];
+
+// stats
+const regions=new Set(SCHOOLS.map(s=>s.place.split(', ').pop()));
+document.getElementById('sTotal').textContent=SCHOOLS.length;
+document.getElementById('sAttend').textContent=SCHOOLS.filter(s=>s.attend).length;
+document.getElementById('sStates').textContent=regions.size;
+
+const W=960,H=600,svg=d3.select('#map');
+const proj=d3.geoConicConformal().parallels([33,45]).rotate([92,0])
+  .fitExtent([[20,70],[W-20,H-20]],{type:'MultiPoint',coordinates:[[-123,32],[-69,47.5],[-80,25],[-118,33],[-75.7,45.4]]});
+const path=d3.geoPath(proj);
+const g=svg.append('g');
+g.append('g').selectAll('path').data(GEO.na.features).join('path').attr('class','country').attr('d',path);
+const states=topojson.feature(GEO.states,GEO.states.objects.states);
+g.append('g').selectAll('path').data(states.features).join('path').attr('class','state').attr('d',path);
+const homeXY=proj(HOME);
+const home=g.append('rect').attr('class','home');
+const pinG=g.append('g');
+
+// inset
+const isvg=d3.select('#inset');
+const iproj=d3.geoMercator().fitExtent([[8,22],[242,222]],{type:'MultiPoint',coordinates:[[-10.5,39.5],[8.5,58.4]]});
+const ipath=d3.geoPath(iproj);
+isvg.append('g').selectAll('path').data(GEO.eu.features).join('path').attr('class','country').style('fill','var(--land)').attr('d',ipath);
+
+const tip=document.getElementById('tip'),box=document.getElementById('mapbox');
+let k=1,selected=null;
+function showTip(s,el){
+  const r=el.getBoundingClientRect(),b=box.getBoundingClientRect();
+  tip.innerHTML=`<b>${s.name}</b><span>${s.place} · ${s.attend?'Walden students attending':'Accepted'}</span>`;
+  tip.style.left=(r.left+r.width/2-b.left)+'px';tip.style.top=(r.top-b.top)+'px';tip.hidden=false;
+}
+function hideTip(){if(!selected)tip.hidden=true}
+
+const us=SCHOOLS.filter(s=>!s.intl),intl=SCHOOLS.filter(s=>s.intl);
+const pins=pinG.selectAll('circle').data(us).join('circle')
+  .attr('class',d=>'pin '+(d.attend?'attend':'accepted'))
+  .attr('cx',d=>proj([d.lon,d.lat])[0]).attr('cy',d=>proj([d.lon,d.lat])[1]);
+const ipins=isvg.append('g').selectAll('circle').data(intl).join('circle')
+  .attr('class',d=>'pin '+(d.attend?'attend':'accepted'))
+  .attr('cx',d=>iproj([d.lon,d.lat])[0]).attr('cy',d=>iproj([d.lon,d.lat])[1]).attr('r',5).attr('stroke-width',1);
+// nudge overlapping Dublin pins apart
+ipins.each(function(d,i){const a=i*2.1;d3.select(this).attr('cx',+this.getAttribute('cx')+(d.name.includes('Dublin')||d.name.includes('Trinity')?Math.cos(a)*6:0)).attr('cy',+this.getAttribute('cy')+(d.name.includes('Dublin')||d.name.includes('Trinity')?Math.sin(a)*6:0))});
+
+[pins,ipins].forEach(sel=>sel
+  .on('mouseenter',function(e,d){showTip(d,this)})
+  .on('mouseleave',hideTip)
+  .on('click',function(e,d){e.stopPropagation();select(d)}));
+
+function style(){
+  const r=Math.max(2.2,5.5/Math.sqrt(k));
+  pins.attr('r',d=>(d.attend?r*1.25:r)).attr('stroke-width',d=>(d===selected?2.5:1)/k);
+  const hs=9/k; home.attr('x',homeXY[0]-hs/2).attr('y',homeXY[1]-hs/2).attr('width',hs).attr('height',hs).attr('transform',`rotate(45 ${homeXY[0]} ${homeXY[1]})`);
+  ipins.attr('stroke-width',d=>d===selected?2.5:1); ipins.filter(d=>d.attend).raise();
+  pins.filter(d=>d.attend).raise(); if(selected&&!selected.intl) pins.filter(d=>d===selected).raise();
+}
+const zoom=d3.zoom().scaleExtent([1,14]).translateExtent([[0,0],[W,H]]).on('zoom',e=>{k=e.transform.k;g.attr('transform',e.transform);style();if(selected)reposition()});
+svg.call(zoom).on('click',()=>{selected=null;tip.hidden=true;style();renderList()});
+document.getElementById('zin').onclick=()=>svg.transition().duration(250).call(zoom.scaleBy,1.8);
+document.getElementById('zout').onclick=()=>svg.transition().duration(250).call(zoom.scaleBy,1/1.8);
+document.getElementById('zreset').onclick=()=>svg.transition().duration(350).call(zoom.transform,d3.zoomIdentity);
+function elFor(d){return (d.intl?ipins:pins).filter(x=>x===d).node()}
+function reposition(){const el=elFor(selected);if(el)showTip(selected,el)}
+function select(d,fly){
+  selected=d;style();renderList();
+  if(fly&&!d.intl){const [x,y]=proj([d.lon,d.lat]),z=Math.max(k,5);
+    svg.transition().duration(500).call(zoom.transform,d3.zoomIdentity.translate(W/2-x*z,H/2-y*z).scale(z)).on('end',reposition);}
+  else reposition();
+}
+style();
+
+// list
+let filter='all',q='';
+const list=document.getElementById('list');
+function renderList(){
+  const items=SCHOOLS.filter(s=>(filter==='all'||(filter==='attend'?s.attend:!s.attend))&&(s.name+' '+s.place).toLowerCase().includes(q))
+    .sort((a,b)=>b.attend-a.attend||a.name.replace(/^The /,'').localeCompare(b.name.replace(/^The /,'')));
+  list.innerHTML='';
+  if(!items.length){list.innerHTML=`<li class="foot" style="padding:8px 4px">${filter==='attend'&&!q?'No matriculations marked yet.':'No colleges match.'}</li>`;return}
+  for(const s of items){const li=document.createElement('li'),b=document.createElement('button');
+    b.innerHTML=`<span class="dot" style="background:var(${s.attend?'--pin-attend':'--pin-accepted'})"></span><span>${s.name}<small>${s.place}</small></span>`;
+    if(s===selected)b.style.background='var(--bg)';
+    b.onclick=()=>select(s,true);li.append(b);list.append(li);}
+}
+document.getElementById('q').addEventListener('input',e=>{q=e.target.value.toLowerCase().trim();renderList()});
+document.querySelectorAll('.filters button').forEach(b=>b.onclick=()=>{filter=b.dataset.f;document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderList();
+  pins.style('display',d=>filter==='all'||(filter==='attend'?d.attend:!d.attend)?null:'none');ipins.style('display',d=>filter==='all'||(filter==='attend'?d.attend:!d.attend)?null:'none')});
+renderList();
+
+})();
+</script>
+
+</body>
+</html>
