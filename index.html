@@ -188,7 +188,13 @@ const ATTENDING = new Set([
 "Kalamazoo College",
 "Middle Tennessee State University",
 "Sarah Lawrence College",
-"Wheaton College"
+"Wheaton College",
+"Rocky Mountain College of Art & Design",
+"University of Alabama",
+"Georgetown College",
+"Earlham College",
+"Loyola University Chicago",
+"The Ohio State University"
 ]);
 
 // [name, city/region, lon, lat]
@@ -374,6 +380,8 @@ const SCHOOLS = [
 ["Colorado College","Colorado Springs, CO",-104.824,38.848],
 ["Indiana University Indianapolis","Indianapolis, IN",-86.176,39.774],
 ["University of North Georgia","Dahlonega, GA",-83.985,34.528],
+["Rocky Mountain College of Art & Design","Lakewood, CO",-105.103,39.711],
+["University of Alabama","Tuscaloosa, AL",-87.545,33.211],
 ["Youngstown State University","Youngstown, OH",-80.646,41.106]
 ].map(([name,place,lon,lat])=>({name,place,lon,lat,attend:ATTENDING.has(name),intl:lon>-30}));
 
